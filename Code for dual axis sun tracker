@@ -1,0 +1,178 @@
+// ====================== LDR PINS ======================
+#define TR A0   // Top Right (East North)
+#define TL A1   // Top Left  (West North)
+#define BL A2   // Bottom Left (West South)
+#define BR A3   // Bottom Right (East South)
+
+// ====================== RELAY PIN ======================
+#define RELAY 3    // Street light relay
+
+
+// =============== HORIZONTAL STEPPER PINS (IN1-IN4) ===============
+#define H_IN1 4
+#define H_IN2 5
+#define H_IN3 6
+#define H_IN4 7
+
+// =============== VERTICAL STEPPER PINS (IN1-IN4) ===============
+#define V_IN1 8
+#define V_IN2 9
+#define V_IN3 10
+#define V_IN4 11
+
+// Stepper speed
+int stepDelay = 3;   // smaller = faster
+
+// Tolerance
+int tol = 50;
+
+
+// ====================== STEPPER FUNCTIONS ======================
+void horizontalCW() {  // EAST direction
+  digitalWrite(H_IN1, HIGH);
+  digitalWrite(H_IN2, LOW);
+  digitalWrite(H_IN3, LOW);
+  digitalWrite(H_IN4, LOW);
+  delay(stepDelay);
+
+  digitalWrite(H_IN1, LOW);
+  digitalWrite(H_IN2, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(H_IN2, LOW);
+  digitalWrite(H_IN3, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(H_IN3, LOW);
+  digitalWrite(H_IN4, HIGH);
+  delay(stepDelay);
+}
+
+void horizontalCCW() {  // WEST direction
+  digitalWrite(H_IN4, HIGH);
+  digitalWrite(H_IN3, LOW);
+  digitalWrite(H_IN2, LOW);
+  digitalWrite(H_IN1, LOW);
+  delay(stepDelay);
+
+  digitalWrite(H_IN4, LOW);
+  digitalWrite(H_IN3, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(H_IN3, LOW);
+  digitalWrite(H_IN2, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(H_IN2, LOW);
+  digitalWrite(H_IN1, HIGH);
+  delay(stepDelay);
+}
+
+void verticalUP() {  // NORTH direction
+  digitalWrite(V_IN1, HIGH);
+  digitalWrite(V_IN2, LOW);
+  digitalWrite(V_IN3, LOW);
+  digitalWrite(V_IN4, LOW);
+  delay(stepDelay);
+
+  digitalWrite(V_IN1, LOW);
+  digitalWrite(V_IN2, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(V_IN2, LOW);
+  digitalWrite(V_IN3, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(V_IN3, LOW);
+  digitalWrite(V_IN4, HIGH);
+  delay(stepDelay);
+}
+
+void verticalDOWN() {  // SOUTH direction
+  digitalWrite(V_IN4, HIGH);
+  digitalWrite(V_IN3, LOW);
+  digitalWrite(V_IN2, LOW);
+  digitalWrite(V_IN1, LOW);
+  delay(stepDelay);
+
+  digitalWrite(V_IN4, LOW);
+  digitalWrite(V_IN3, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(V_IN3, LOW);
+  digitalWrite(V_IN2, HIGH);
+  delay(stepDelay);
+
+  digitalWrite(V_IN2, LOW);
+  digitalWrite(V_IN1, HIGH);
+  delay(stepDelay);
+}
+
+
+// ====================== SETUP ======================
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(RELAY, OUTPUT);
+  digitalWrite(RELAY, LOW); // OFF initially
+
+  pinMode(H_IN1, OUTPUT);
+  pinMode(H_IN2, OUTPUT);
+  pinMode(H_IN3, OUTPUT);
+  pinMode(H_IN4, OUTPUT);
+
+  pinMode(V_IN1, OUTPUT);
+  pinMode(V_IN2, OUTPUT);
+  pinMode(V_IN3, OUTPUT);
+  pinMode(V_IN4, OUTPUT);
+
+  Serial.println("Solar Tracker Started...");
+}
+
+
+// ====================== MAIN LOOP ======================
+void loop() {
+
+  // Read all LDR values
+  int tr = analogRead(TR);
+  int tl = analogRead(TL);
+  int bl = analogRead(BL);
+  int br = analogRead(BR);
+
+  // Print values
+  Serial.print("TR: "); Serial.print(tr);
+  Serial.print("  TL: "); Serial.print(tl);
+  Serial.print("  BL: "); Serial.print(bl);
+  Serial.print("  BR: "); Serial.println(br);
+
+  // ---------------- NIGHT DETECTION ----------------
+  if (tr < 200 && tl < 200 && bl < 200 && br < 200) {
+    digitalWrite(RELAY, HIGH);  // Turn ON street light
+  } else {
+    digitalWrite(RELAY, LOW);   // Turn OFF street light
+  }
+
+  // ---------------- HORIZONTAL MOVEMENT ----------------
+  int rightAvg = (tr + br) / 2;  // East
+  int leftAvg  = (tl + bl) / 2;  // West
+
+  if (rightAvg - leftAvg > tol) {
+    horizontalCW();   // Move to EAST
+  }
+  else if (leftAvg - rightAvg > tol) {
+    horizontalCCW();  // Move to WEST
+  }
+
+  // ---------------- VERTICAL MOVEMENT ----------------
+  int topAvg    = (tr + tl) / 2;  // North
+  int bottomAvg = (br + bl) / 2;  // South
+
+  if (topAvg - bottomAvg > tol) {
+    verticalUP();  // Move UP
+  }
+  else if (bottomAvg - topAvg > tol) {
+    verticalDOWN();  // Move DOWN
+  }
+
+  delay(20);  // smooth response
+}
